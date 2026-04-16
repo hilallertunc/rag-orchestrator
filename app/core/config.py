@@ -6,6 +6,8 @@ class Settings(BaseSettings):
     debug: bool = True
     groq_api_key: str = ""
     database_url: str = ""
+    upstash_redis_url: str = ""
+    upstash_redis_token: str = ""
 
     class Config:
         env_file = ".env"

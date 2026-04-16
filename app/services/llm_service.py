@@ -6,9 +6,7 @@ from app.core.logger import get_logger
 logger = get_logger(__name__)
 client = Groq(api_key=settings.groq_api_key)
 
-async def ask_llm(question: str, context: str = "") -> dict:
-    
-
+async def ask_llm(question: str, context: str = "", model: str = "llama-3.3-70b-versatile") -> dict:
     if context:
         system_prompt = f"""Sen yardımcı bir asistansın.
 Aşağıdaki bilgileri kullanarak soruyu cevapla:
@@ -26,7 +24,7 @@ Eğer bilgiler soruyla ilgili değilse, genel bilginle cevap ver."""
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": question}
         ],
-        model="llama-3.3-70b-versatile",
+        model=model,
         temperature=0.7,
         max_tokens=1024,
     )
@@ -40,14 +38,14 @@ Eğer bilgiler soruyla ilgili değilse, genel bilginle cevap ver."""
             "question_length": len(question),
             "tokens_used": tokens_used,
             "duration_ms": duration_ms,
-            "model": "llama-3.3-70b-versatile",
+            "model": model,
             "has_context": bool(context)
         }
     })
 
     return {
         "answer": answer,
-        "model": "llama-3.3-70b-versatile",
+        "model": model,
         "tokens_used": tokens_used,
         "duration_ms": duration_ms
     }
