@@ -21,12 +21,12 @@ def classify_question(question: str) -> str:
     simple_score = sum(1 for kw in SIMPLE_KEYWORDS if kw in question_lower)
     
     word_count = len(question.split())
-    if word_count > 20:
+    if word_count > 10:
         complex_score += 2
-    elif word_count < 8:
+    elif word_count < 5:
         simple_score += 1
 
-    if complex_score > simple_score:
+    if complex_score >= simple_score and complex_score > 0:
         complexity = "complex"
     else:
         complexity = "simple"
