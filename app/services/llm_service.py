@@ -8,14 +8,14 @@ client = Groq(api_key=settings.groq_api_key)
 
 async def ask_llm(question: str, context: str = "", model: str = "llama-3.3-70b-versatile") -> dict:
     if context:
-        system_prompt = f"""Sen yardımcı bir asistansın.
-Aşağıdaki bilgileri kullanarak soruyu cevapla:
+        system_prompt = f"""You are a helpful assistant.
+Use the following information to answer the question:
 
 {context}
 
-Eğer bilgiler soruyla ilgili değilse, genel bilginle cevap ver."""
+If the information is not relevant to the question, answer using your general knowledge."""
     else:
-        system_prompt = "Sen yardımcı bir asistansın. Soruları net ve kısa cevapla."
+        system_prompt = "You are a helpful assistant. Answer questions clearly and concisely."
 
     start_time = time.time()
 

@@ -8,6 +8,7 @@ from app.services.router_service import classify_question, select_model
 from app.services.rag_service import search_documents
 from app.services.metrics_service import get_metrics
 from app.services.eval_runner import run_eval
+from app.services.tenant_service import get_tenant_config, is_rate_limited
 from app.core.logger import get_logger
 from app.core.database import get_db
 from app.models.request_log import RequestLog
@@ -46,6 +47,10 @@ async def ask(request: QuestionRequest, db: AsyncSession = Depends(get_db)):
     if not request.question.strip():
         raise HTTPException(status_code=400, detail="Question cannot be empty")
 
+    if is_rate_limited(request.tenant):
+        raise HTTPException(status_code=429, detail="Rate limit exceeded")
+
+    tenant_config = get_tenant_config(request.tenant)
     start_time = time.time()
 
     logger.info("request_received", extra={
@@ -53,7 +58,7 @@ async def ask(request: QuestionRequest, db: AsyncSession = Depends(get_db)):
     })
 
     cached = await get_from_cache(request.question)
-    if cached:
+    if cached and tenant_config["cache_enabled"]:
         total_ms = round((time.time() - start_time) * 1000)
         return QuestionResponse(
             question=request.question,
@@ -70,7 +75,7 @@ async def ask(request: QuestionRequest, db: AsyncSession = Depends(get_db)):
     context = ""
     strategy = f"{complexity}_llm"
 
-    if complexity == "complex":
+    if complexity == "complex" and tenant_config["rag_enabled"]:
         documents = await search_documents(request.question)
         if documents:
             context = "\n\n".join([doc["text"] for doc in documents])
@@ -82,10 +87,11 @@ async def ask(request: QuestionRequest, db: AsyncSession = Depends(get_db)):
     result = await ask_llm(request.question, context=context, model=model)
     total_ms = round((time.time() - start_time) * 1000)
 
-    await save_to_cache(request.question, {
-        "answer": result["answer"],
-        "model": model
-    })
+    if tenant_config["cache_enabled"]:
+        await save_to_cache(request.question, {
+            "answer": result["answer"],
+            "model": model
+        })
 
     log = RequestLog(
         question=request.question,
