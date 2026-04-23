@@ -6,6 +6,8 @@ from app.services.llm_service import ask_llm
 from app.services.cache_service import get_from_cache, save_to_cache
 from app.services.router_service import classify_question, select_model
 from app.services.rag_service import search_documents
+from app.services.metrics_service import get_metrics
+from app.services.eval_runner import run_eval
 from app.core.logger import get_logger
 from app.core.database import get_db
 from app.models.request_log import RequestLog
@@ -31,7 +33,7 @@ class QuestionResponse(BaseModel):
 
 @router.get("/health")
 async def health_check():
-    return {"status": "ok", "message": "RAG Orchestrator çalışıyor"}
+    return {"status": "ok", "message": "RAG Orchestrator is running"}
 
 @router.post("/documents")
 async def add_doc(request: DocumentRequest):
@@ -42,7 +44,7 @@ async def add_doc(request: DocumentRequest):
 @router.post("/ask", response_model=QuestionResponse)
 async def ask(request: QuestionRequest, db: AsyncSession = Depends(get_db)):
     if not request.question.strip():
-        raise HTTPException(status_code=400, detail="Soru boş olamaz")
+        raise HTTPException(status_code=400, detail="Question cannot be empty")
 
     start_time = time.time()
 
@@ -62,7 +64,6 @@ async def ask(request: QuestionRequest, db: AsyncSession = Depends(get_db)):
             strategy="cache_hit"
         )
 
-    
     complexity = classify_question(request.question)
     model = select_model(complexity, request.tenant)
 
@@ -86,7 +87,6 @@ async def ask(request: QuestionRequest, db: AsyncSession = Depends(get_db)):
         "model": model
     })
 
-   
     log = RequestLog(
         question=request.question,
         answer=result["answer"],
@@ -115,3 +115,11 @@ async def ask(request: QuestionRequest, db: AsyncSession = Depends(get_db)):
         duration_ms=total_ms,
         strategy=strategy
     )
+
+@router.get("/metrics")
+async def metrics(db: AsyncSession = Depends(get_db)):
+    return await get_metrics(db)
+
+@router.get("/eval")
+async def eval_endpoint():
+    return await run_eval()
